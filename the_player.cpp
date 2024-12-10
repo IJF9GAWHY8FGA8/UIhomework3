@@ -4,31 +4,46 @@
 
 #include "the_player.h"
 
-// all buttons have been setup, store pointers here
+ThePlayer::ThePlayer(QObject *parent) : QMediaPlayer(parent) {
+    setVolume(0); // be slightly less annoying
+    connect(this, &QMediaPlayer::stateChanged, this, &ThePlayer::playStateChanged);
+    mTimer = new QTimer(this);
+    mTimer->setInterval(1000); // 1000ms is one second between ...
+    mTimer->start();
+    connect(mTimer, &QTimer::timeout, this, &ThePlayer::shuffle);
+}
+
+ThePlayer::~ThePlayer() {
+    mTimer->stop();
+    delete mTimer;
+}
+
 void ThePlayer::setContent(std::vector<TheButton*>* b, std::vector<TheButtonInfo>* i) {
     buttons = b;
     infos = i;
-    jumpTo(buttons -> at(0) -> info);
+    jumpTo(buttons->at(0)->info);
 }
 
-// change the image and video for one button every one second
 void ThePlayer::shuffle() {
-    TheButtonInfo* i = & infos -> at (rand() % infos->size() );
-//        setMedia(*i->url);
-    buttons -> at( updateCount++ % buttons->size() ) -> init( i );
+    TheButtonInfo* i = &infos->at(rand() % infos->size());
+    buttons->at(updateCount++ % buttons->size())->init(i);
 }
 
-void ThePlayer::playStateChanged (QMediaPlayer::State ms) {
+void ThePlayer::playStateChanged(QMediaPlayer::State ms) {
     switch (ms) {
-        case QMediaPlayer::State::StoppedState:
-            play(); // starting playing again...
-            break;
+    case QMediaPlayer::StoppedState:
+        play(); // starting playing again...
+        break;
     default:
         break;
     }
 }
 
-void ThePlayer::jumpTo (TheButtonInfo* button) {
-    setMedia( * button -> url);
+void ThePlayer::jumpTo(TheButtonInfo* button) {
+    setMedia(*button->url);
     play();
+}
+
+void ThePlayer::setPlaybackSpeed(double speed) {
+    setPlaybackRate(speed);
 }
