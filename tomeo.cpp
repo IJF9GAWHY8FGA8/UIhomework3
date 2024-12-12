@@ -8,9 +8,11 @@
 #include <QtWidgets/QFileIconProvider>
 #include <QDesktopServices>
 #include <QImageReader>
+#include <QObject>
 #include <QMessageBox>
 #include <QtCore/QDir>
 #include <QtCore/QDirIterator>
+#include <QSlider>
 #include "the_player.h"
 #include "the_button.h"
 
@@ -91,12 +93,14 @@ int main(int argc, char *argv[]) {
     player->setContent(&buttons, &videos);
 
     QSlider *speedSlider = new QSlider(Qt::Horizontal);
-    speedSlider->setRange(0.5, 2.0);
-    speedSlider->setValue(1.0);
+    speedSlider->setRange(5, 20);
+    speedSlider->setValue(10);
+    speedSlider->setTickInterval(1);
     speedSlider->setTickPosition(QSlider::TicksBelow);
-    speedSlider->setTickInterval(0.25);
     layout->addWidget(speedSlider);
-    connect(speedSlider, &QSlider::valueChanged, player, &ThePlayer::setPlaybackSpeed);
+    QObject::connect(speedSlider, &QSlider::valueChanged, [player](int value) {
+        player->setPlaybackSpeed(value / 10.0);
+    });
 
     QWidget window;
     QVBoxLayout *top = new QVBoxLayout(&window);
