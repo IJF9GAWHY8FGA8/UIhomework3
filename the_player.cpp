@@ -33,3 +33,19 @@ void ThePlayer::pauseVideo() {
         play();  // If not playing, it starts playing
     }
 }
+
+void ThePlayer::updateSliderPosition() {
+    if (duration() > 0) {
+        int positionValue = position();  // 获取当前播放位置
+        int position = (int)((float)positionValue / duration() * 100);  // 计算当前进度为百分比
+        progressSlider->setValue(position);  // 更新滑块位置
+    }
+}
+
+void ThePlayer::seekVideo(int value) {
+    if (duration() > 0) {
+        int seekPosition = (value / 100.0) * duration();  // 将滑块的值转换为视频的时间位置
+        setPosition(seekPosition);  // 设置视频播放位置
+    }
+}
+

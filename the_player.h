@@ -7,6 +7,10 @@
 #include <vector>
 #include <QTimer>
 #include <QPushButton>
+#include <QSlider>
+#include <QVideoWidget>
+#include <QResizeEvent>
+
 
 class ThePlayer : public QMediaPlayer {
     Q_OBJECT
@@ -17,6 +21,7 @@ private:
     QTimer* mTimer;  // Timer for periodic updates
     long updateCount = 0;  // A counter to track updates
     int currentIndex = 0;  // Index to track the current video
+    QSlider* progressSlider;
 
 public:
     ThePlayer() : QMediaPlayer(nullptr) {
@@ -32,6 +37,11 @@ public:
 
     // Set the content for the buttons and videos
     void setContent(std::vector<TheButton*>* b, std::vector<TheButtonInfo>* i);
+    QSlider* getProgressSlider() const { return progressSlider; }
+
+    void setProgressSlider(QSlider* slider) {
+        progressSlider = slider;
+    }
 
 private slots:
     // Shuffle the button icons and video every second
@@ -56,6 +66,22 @@ public slots:
             play();  // Play the video
         }
     }
+    void updateSliderPosition();  // 更新进度条位置
+    void seekVideo(int value);    // 根据进度条值调整播放进度
 };
 
+class CustomVideoWidget : public QVideoWidget {
+    Q_OBJECT
+public:
+    explicit CustomVideoWidget(QWidget *parent = nullptr) : QVideoWidget(parent) {}
+
+protected:
+    void resizeEvent(QResizeEvent *event) override {
+        QVideoWidget::resizeEvent(event);  // 调用父类的 resizeEvent
+        emit resized(width());  // 触发一个自定义信号，传递新宽度
+    }
+
+signals:
+    void resized(int newWidth);  // 自定义信号，传递新宽度
+};
 #endif // CW2_THE_PLAYER_H

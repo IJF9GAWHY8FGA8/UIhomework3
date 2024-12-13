@@ -9,6 +9,8 @@
 #include <QDirIterator>
 #include <QImageReader>
 #include <QIcon>
+#include <QSlider>
+#include <QTimer>
 #include "the_player.h"
 #include "the_button.h"
 
@@ -56,6 +58,48 @@ QString getVideoPath() {
     dir.cdUp();
     dir.cd("2811_cw3-master-release-lowres/videos");  // Video storage directory
     return dir.absolutePath();
+}
+
+// Define setupUI function outside of main()
+void setupUI(QWidget* parent, ThePlayer* player) {
+    QVBoxLayout* layout = new QVBoxLayout(parent);
+
+    // Create and add the custom video widget
+    CustomVideoWidget* videoWidget = new CustomVideoWidget;
+    layout->addWidget(videoWidget);
+
+    // Create progress slider and set range
+    QSlider* progressSlider = new QSlider(Qt::Horizontal, parent);
+    progressSlider->setRange(0, 100);  // Set range to 0-100%
+    progressSlider->setFixedWidth(videoWidget->width());  // Initial width to match video width
+    layout->addWidget(progressSlider);
+
+    // Set the layout
+    parent->setLayout(layout);
+
+    // Link progressSlider to player
+    player->setProgressSlider(progressSlider);
+
+    // Create a timer to update the progress
+    QTimer* timer = new QTimer(parent);
+    QObject::connect(timer, &QTimer::timeout, [=]() {
+        if (player->duration() > 0) {
+            int position = (int)((float)player->position() / player->duration() * 100);  // Calculate the progress
+            progressSlider->setValue(position);  // Update the progress slider
+        }
+    });
+    timer->start(100);  // Update every 100 ms
+
+    // Connect slider movement to video position
+    QObject::connect(progressSlider, &QSlider::sliderMoved, [=](int value) {
+        int newPosition = (value / 100.0) * player->duration();  // Convert slider value to actual video position
+        player->setPosition(newPosition);  // Set the new position in the player
+    });
+
+    // Connect resized signal from videoWidget to update progressSlider width
+    QObject::connect(videoWidget, &CustomVideoWidget::resized, [=](int newWidth) {
+        progressSlider->setFixedWidth(newWidth);  // Update progress slider width to match video widget width
+    });
 }
 
 int main(int argc, char *argv[]) {
@@ -106,11 +150,11 @@ int main(int argc, char *argv[]) {
     prevButton->setText("◁◁");  // Double triangle represents "Previous"
     prevButton->setStyleSheet(
         "QPushButton {"
-        "  border: none;"
-        "  background-color: transparent;"
-        "  font-size: 30px;"
-        "  font-weight: bold;"
-        "  color: black;"
+        "  border: none; "
+        "  background-color: transparent; "
+        "  font-size: 30px; "
+        "  font-weight: bold; "
+        "  color: black; "
         "}"
     );
 
@@ -119,11 +163,11 @@ int main(int argc, char *argv[]) {
     nextButton->setText("▷▷");  // Double triangle represents "Next"
     nextButton->setStyleSheet(
         "QPushButton {"
-        "  border: none;"
-        "  background-color: transparent;"
-        "  font-size: 30px;"
-        "  font-weight: bold;"
-        "  color: black;"
+        "  border: none; "
+        "  background-color: transparent; "
+        "  font-size: 30px; "
+        "  font-weight: bold; "
+        "  color: black; "
         "}"
     );
 
@@ -179,8 +223,13 @@ int main(int argc, char *argv[]) {
     topLayout->addWidget(videoWidget);
     topLayout->addWidget(buttonWidget);
 
+    // Add the progress slider and setup the UI
+    QSlider* progressSlider = player->getProgressSlider();  // Get progress slider from player
+    topLayout->addWidget(progressSlider);
+    setupUI(&window, player);  // Set up the UI with the window and player
+
     // Show the window
     window.show();
 
     return app.exec();
-}
+   }
