@@ -13,6 +13,7 @@
 #include <QTimer>
 #include "the_player.h"
 #include "the_button.h"
+#include "the_slider.h"
 
 // Get video and thumbnail information
 std::vector<TheButtonInfo> getInfoIn(std::string loc) {
@@ -61,130 +62,54 @@ QString getVideoPath() {
 }
 
 // Define setupUI function outside of main()
-void setupUI(QWidget* parent, ThePlayer* player) {
-    QVBoxLayout* layout = new QVBoxLayout(parent);
-
+void setupUI(QWidget* parent, ThePlayer* player, QVBoxLayout* mainLayout) {
     // Create and add the custom video widget
-    CustomVideoWidget* videoWidget = new CustomVideoWidget;
-    layout->addWidget(videoWidget);
+    CustomVideoWidget* videoWidget = new CustomVideoWidget;  // Custom video widget
+    mainLayout->addWidget(videoWidget);
 
-    // Create progress slider and set range
-    QSlider* progressSlider = new QSlider(Qt::Horizontal, parent);
-    progressSlider->setRange(0, 100);  // Set range to 0-100%
-    progressSlider->setFixedWidth(videoWidget->width());  // Initial width to match video width
-    layout->addWidget(progressSlider);
+    // Create the video progress slider (replace QSlider)
+    VideoSlider* progressSlider = new VideoSlider(parent);
+    progressSlider->setRange(0, 100);  // Set the range of the progress bar to 0-100%
+    progressSlider->setFixedWidth(videoWidget->width());  // Set progress slider width to match video widget
+    mainLayout->addWidget(progressSlider);  // Add progress slider below the video widget
 
-    // Set the layout
-    parent->setLayout(layout);
-
-    // Link progressSlider to player
+    // Connect the progress slider to the player
     player->setProgressSlider(progressSlider);
 
-    // Create a timer to update the progress
+    // Create a timer to periodically update the progress
     QTimer* timer = new QTimer(parent);
     QObject::connect(timer, &QTimer::timeout, [=]() {
         if (player->duration() > 0) {
-            int position = (int)((float)player->position() / player->duration() * 100);  // Calculate the progress
+            int position = (int)((float)player->position() / player->duration() * 100);  // Calculate progress
             progressSlider->setValue(position);  // Update the progress slider
         }
     });
     timer->start(100);  // Update every 100 ms
 
-    // Connect slider movement to video position
-    QObject::connect(progressSlider, &QSlider::sliderMoved, [=](int value) {
-        int newPosition = (value / 100.0) * player->duration();  // Convert slider value to actual video position
-        player->setPosition(newPosition);  // Set the new position in the player
+    // Connect the progress slider movement to the video position
+    QObject::connect(progressSlider, &VideoSlider::sliderMoved, [=](int value) {
+        int newPosition = (value / 100.0) * player->duration();  // Convert progress value to video position
+        player->setPosition(newPosition);  // Set the player's position
     });
 
-    // Connect resized signal from videoWidget to update progressSlider width
+    // Connect the video widget resizing to the progress slider width
     QObject::connect(videoWidget, &CustomVideoWidget::resized, [=](int newWidth) {
-        progressSlider->setFixedWidth(newWidth);  // Update progress slider width to match video widget width
+        progressSlider->setFixedWidth(newWidth);  // Update the progress slider width
     });
 }
 
-int main(int argc, char *argv[]) {
-    QApplication app(argc, argv);
-
-    // Get the video files and thumbnails
-    std::vector<TheButtonInfo> videos = getInfoIn(getVideoPath().toStdString());
-    if (videos.empty()) {
-        QMessageBox::warning(nullptr, "No Videos", "No videos found in the './videos' folder!");
-        return -1;
-    }
-
-    // Create the video display widget
-    QVideoWidget *videoWidget = new QVideoWidget;
-    ThePlayer *player = new ThePlayer;
-    player->setVideoOutput(videoWidget);
-
-    // Set up button layout
-    QWidget *buttonWidget = new QWidget();
-    QHBoxLayout *buttonLayout = new QHBoxLayout();  // Use one layout
-    buttonWidget->setLayout(buttonLayout);
-
-    // Create and initialize buttons
-    std::vector<TheButton*> buttons; // Declare the button container
-    for (int i = 0; i < 4 && i < videos.size(); i++) {
-        TheButton *button = new TheButton(buttonWidget);
-        button->connect(button, SIGNAL(jumpTo(TheButtonInfo*)), player, SLOT(jumpTo(TheButtonInfo*)));
-        buttonLayout->addWidget(button);  // Use buttonLayout instead of layout
-        button->init(&videos.at(i));
-        buttons.push_back(button); // Add the button to the container
-    }
-
-    // Set player content
-    player->setContent(&buttons, &videos);
-
-    // Create the main window
-    QWidget window;
-    QVBoxLayout *topLayout = new QVBoxLayout();
-    window.setLayout(topLayout);
-    window.setWindowTitle("Tomeo Video Player");
-    window.setMinimumSize(800, 600);
-
+// Function to setup control buttons: pause, previous, and next
+void setupControls(QVBoxLayout* mainLayout, QWidget* parent, ThePlayer* player, std::vector<TheButtonInfo>& videos) {
     // Create the pause button
     QPushButton* pauseButton = new QPushButton("||");
 
     // Create the previous button (double triangle)
     QPushButton *prevButton = new QPushButton();
     prevButton->setText("◁◁");  // Double triangle represents "Previous"
-    prevButton->setStyleSheet(
-        "QPushButton {"
-        "  border: none; "
-        "  background-color: transparent; "
-        "  font-size: 30px; "
-        "  font-weight: bold; "
-        "  color: black; "
-        "}"
-    );
 
     // Create the next button (double triangle)
     QPushButton *nextButton = new QPushButton();
     nextButton->setText("▷▷");  // Double triangle represents "Next"
-    nextButton->setStyleSheet(
-        "QPushButton {"
-        "  border: none; "
-        "  background-color: transparent; "
-        "  font-size: 30px; "
-        "  font-weight: bold; "
-        "  color: black; "
-        "}"
-    );
-
-    buttonLayout->addWidget(prevButton);
-    buttonLayout->addWidget(pauseButton);
-    buttonLayout->addWidget(nextButton);
-
-    // Update the pause button style
-    pauseButton->setStyleSheet(
-        "QPushButton {"
-        "font-size: 30px;"              // Set font size
-        "font-weight: bold;"            // Set font weight to bold
-        "border: none;"                 // Remove border
-        "background-color: transparent;"  // Transparent background
-        "color: black;"                 // Set text color
-        "}"
-    );
 
     // Pause button functionality
     QObject::connect(pauseButton, &QPushButton::clicked, [=]() {
@@ -197,9 +122,8 @@ int main(int argc, char *argv[]) {
         }
     });
 
-    int currentIndex = 0;
-
     // Previous button functionality
+    int currentIndex = 0;
     QObject::connect(prevButton, &QPushButton::clicked, [&]() {
         if (currentIndex > 0) {
             currentIndex--;
@@ -219,17 +143,64 @@ int main(int argc, char *argv[]) {
         player->setVideoByIndex(currentIndex, &videos);
     });
 
-    // Add video widget and button widget to the main window layout
-    topLayout->addWidget(videoWidget);
-    topLayout->addWidget(buttonWidget);
+    // Layout for controls
+    QHBoxLayout *controlLayout = new QHBoxLayout();
+    controlLayout->addWidget(pauseButton);
+    controlLayout->addWidget(prevButton);
+    controlLayout->addWidget(nextButton);
 
-    // Add the progress slider and setup the UI
-    QSlider* progressSlider = player->getProgressSlider();  // Get progress slider from player
-    topLayout->addWidget(progressSlider);
-    setupUI(&window, player);  // Set up the UI with the window and player
+    // Add control layout to the main layout
+    mainLayout->addLayout(controlLayout);
+}
+
+int main(int argc, char *argv[]) {
+    QApplication app(argc, argv);
+
+    // Get video files and thumbnails
+    std::vector<TheButtonInfo> videos = getInfoIn(getVideoPath().toStdString());
+    if (videos.empty()) {
+        QMessageBox::warning(nullptr, "No Videos", "No videos found in the './videos' folder!");
+        return -1;
+    }
+
+    // Create the video widget
+    QVideoWidget *videoWidget = new QVideoWidget;
+    ThePlayer *player = new ThePlayer;
+    player->setVideoOutput(videoWidget);  // Connect the player to the video widget
+
+    // Setup the button layout
+    QWidget *buttonWidget = new QWidget();
+    QVBoxLayout *buttonLayout = new QVBoxLayout(buttonWidget);
+    buttonWidget->setLayout(buttonLayout);
+
+    // Create a button for each video and add them to the layout
+    std::vector<TheButton*> buttons;
+    for (int i = 0; i < 4 && i < videos.size(); i++) {
+        TheButton *button = new TheButton(buttonWidget);
+        button->connect(button, SIGNAL(jumpTo(TheButtonInfo*)), player, SLOT(jumpTo(TheButtonInfo*)));
+        buttonLayout->addWidget(button);
+        button->init(&videos.at(i));
+        buttons.push_back(button);
+    }
+    player->setContent(&buttons, &videos);
+
+    // Create the main window
+    QWidget window;
+    QVBoxLayout *mainLayout = new QVBoxLayout(&window);
+    window.setWindowTitle("Tomeo Video Player");
+    window.setMinimumSize(800, 600);
+
+    // Set up UI components
+    setupUI(&window, player, mainLayout);
+
+    // Add the video widget to the layout
+    mainLayout->addWidget(videoWidget);
+
+    // Set up the control buttons
+    setupControls(mainLayout, &window, player, videos);
 
     // Show the window
     window.show();
 
-    return app.exec();
-   }
+    return app.exec();  // Start the event loop
+}
