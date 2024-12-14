@@ -14,6 +14,7 @@
 #include "the_player.h"
 #include "the_button.h"
 #include "the_slider.h"
+#include "customvideowidget.h"
 
 // Get video and thumbnail information
 std::vector<TheButtonInfo> getInfoIn(std::string loc) {
@@ -99,7 +100,7 @@ void setupUI(QWidget* parent, ThePlayer* player, QVBoxLayout* mainLayout) {
 }
 
 // Function to setup control buttons: pause, previous, and next
-void setupControls(QVBoxLayout* mainLayout, QWidget* parent, ThePlayer* player, std::vector<TheButtonInfo>& videos) {
+void setupControls(QVBoxLayout* mainLayout, QWidget* parent, ThePlayer* player, std::vector<TheButtonInfo>& videos, int& currentIndex) {
     // Create the pause button
     QPushButton* pauseButton = new QPushButton("||");
 
@@ -110,6 +111,15 @@ void setupControls(QVBoxLayout* mainLayout, QWidget* parent, ThePlayer* player, 
     // Create the next button (double triangle)
     QPushButton *nextButton = new QPushButton();
     nextButton->setText("▷▷");  // Double triangle represents "Next"
+
+    // Ensure videos list is not empty
+    if (videos.empty()) {
+        qDebug() << "No videos found!";
+        return;  // If no videos, do nothing
+    }
+
+    // Debugging: Check the size of the video list
+    qDebug() << "Number of videos: " << videos.size();
 
     // Pause button functionality
     QObject::connect(pauseButton, &QPushButton::clicked, [=]() {
@@ -123,24 +133,39 @@ void setupControls(QVBoxLayout* mainLayout, QWidget* parent, ThePlayer* player, 
     });
 
     // Previous button functionality
-    int currentIndex = 0;
     QObject::connect(prevButton, &QPushButton::clicked, [&]() {
+        qDebug() << "Prev button clicked! Current index: " << currentIndex;
+
+        // Ensure currentIndex is within valid range
         if (currentIndex > 0) {
-            currentIndex--;
+            currentIndex--;  // Move to the previous video
         } else {
-            currentIndex = videos.size() - 1;  // If it is the first video, jump to the last one
+            currentIndex = videos.size() - 1;  // If at the first video, go to the last one
         }
-        player->setVideoByIndex(currentIndex, &videos);
+
+        // Debug output
+        qDebug() << "New index after prev: " << currentIndex;
+
+        // Call setVideoByIndex with the updated currentIndex
+        player->setVideoByIndex(currentIndex, &videos);  // Play the video at the new index
     });
 
     // Next button functionality
     QObject::connect(nextButton, &QPushButton::clicked, [&]() {
+        qDebug() << "Next button clicked! Current index: " << currentIndex;
+
+        // Ensure currentIndex is within valid range
         if (currentIndex < videos.size() - 1) {
-            currentIndex++;
+            currentIndex++;  // Move to the next video
         } else {
-            currentIndex = 0;  // If it is the last video, jump to the first one
+            currentIndex = 0;  // If at the last video, go to the first one
         }
-        player->setVideoByIndex(currentIndex, &videos);
+
+        // Debug output
+        qDebug() << "New index after next: " << currentIndex;
+
+        // Call setVideoByIndex with the updated currentIndex
+        player->setVideoByIndex(currentIndex, &videos);  // Play the video at the new index
     });
 
     // Layout for controls
@@ -196,11 +221,15 @@ int main(int argc, char *argv[]) {
     // Add the video widget to the layout
     mainLayout->addWidget(videoWidget);
 
+    // Initialize currentIndex to 0 (first video in the list)
+    int currentIndex = 0;
+
     // Set up the control buttons
-    setupControls(mainLayout, &window, player, videos);
+    setupControls(mainLayout, &window, player, videos, currentIndex);
 
     // Show the window
     window.show();
 
     return app.exec();  // Start the event loop
 }
+
