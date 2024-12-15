@@ -13,6 +13,8 @@
 #include <QTimer>
 #include <QComboBox>
 #include <QLabel>
+#include <QString>
+#include <QTime>
 #include "the_player.h"
 #include "the_button.h"
 #include "the_slider.h"
@@ -75,7 +77,26 @@ void setupUI(QWidget* parent, ThePlayer* player, QVBoxLayout* mainLayout) {
     VideoSlider* progressSlider = new VideoSlider(parent);
     progressSlider->setRange(0, 100);  // 设置进度条范围为 0-100%
     progressSlider->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);  // 宽度可扩展，高度固定
-    mainLayout->addWidget(progressSlider, 1);  // 将进度条添加到布局中，权重为1
+
+    // 创建时间显示标签
+    QLabel* timeLabel = new QLabel("00:00:00 / 00:00:00", parent);
+    timeLabel->setAlignment(Qt::AlignCenter);  // 居中显示
+
+    // 创建水平布局，将进度条、时间显示和按钮放在同一排
+    QHBoxLayout* timeLayout = new QHBoxLayout;
+    timeLayout->setContentsMargins(0, 0, 0, 0);
+    timeLayout->setSpacing(10);  // 调整间距
+
+    // 设置时间标签的宽度，宽度根据时间内容动态调整
+    timeLabel->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Fixed);
+    timeLabel->adjustSize();  // 调整标签的大小以适应内容
+
+    // 将进度条和时间标签添加到布局
+    timeLayout->addWidget(progressSlider, 1);  // 将进度条添加到布局
+    timeLayout->addWidget(timeLabel, 0);  // 将时间标签添加到布局
+
+    // 将时间布局添加到主布局中
+    mainLayout->addLayout(timeLayout, 1);  // 在主布局中添加时间布局
 
     // 将进度条连接到播放器
     player->setProgressSlider(progressSlider);
@@ -86,6 +107,28 @@ void setupUI(QWidget* parent, ThePlayer* player, QVBoxLayout* mainLayout) {
         if (player->duration() > 0) {
             int position = (int)((float)player->position() / player->duration() * 100);  // 计算进度
             progressSlider->setValue(position);  // 更新进度条的值
+
+            // 更新时间显示标签
+            int currentTime = player->position() / 1000;  // 获取当前播放时间（秒）
+            int totalTime = player->duration() / 1000;  // 获取总时长（秒）
+            int currentHours = currentTime / 3600;
+            int currentMinutes = (currentTime % 3600) / 60;
+            int currentSeconds = currentTime % 60;
+            int totalHours = totalTime / 3600;
+            int totalMinutes = (totalTime % 3600) / 60;
+            int totalSeconds = totalTime % 60;
+
+            QString timeString = QString("%1:%2:%3 / %4:%5:%6")
+                .arg(currentHours, 2, 10, QChar('0'))
+                .arg(currentMinutes, 2, 10, QChar('0'))
+                .arg(currentSeconds, 2, 10, QChar('0'))
+                .arg(totalHours, 2, 10, QChar('0'))
+                .arg(totalMinutes, 2, 10, QChar('0'))
+                .arg(totalSeconds, 2, 10, QChar('0'));
+            timeLabel->setText(timeString);  // 更新时间标签
+
+            // 调整时间标签宽度
+            timeLabel->adjustSize();  // 重新调整时间标签的大小
         }
     });
     timer->start(100);  // 每100毫秒更新一次
@@ -94,11 +137,6 @@ void setupUI(QWidget* parent, ThePlayer* player, QVBoxLayout* mainLayout) {
     QObject::connect(progressSlider, &VideoSlider::sliderMoved, [=](int value) {
         int newPosition = (value / 100.0) * player->duration();  // 将进度条的值转换为视频位置
         player->setPosition(newPosition);  // 设置播放器的位置
-    });
-
-    // 连接视频控件的大小变化与进度条宽度
-    QObject::connect(videoWidget, &CustomVideoWidget::resized, [=](int newWidth) {
-        progressSlider->setFixedWidth(newWidth);  // 更新进度条的宽度，确保与视频控件一致
     });
 
     // 设置视频播放器的输出为自定义视频控件
@@ -126,7 +164,7 @@ void setupControls(QVBoxLayout* mainLayout, QWidget* parent, ThePlayer* player, 
     QPushButton* rewindButton = new QPushButton("⏪");  // 使用 ⏪ 表示快退
 
     // 设置按钮最小和最大尺寸
-    QSize minSize(50, 50);  // 设置按钮最小尺寸为 50x50
+    QSize minSize(25, 25);  // 设置按钮最小尺寸为 25x25
     QSize maxSize(150, 50); // 设置按钮最大尺寸为 150x50
 
     // 设置按钮尺寸
@@ -161,7 +199,7 @@ void setupControls(QVBoxLayout* mainLayout, QWidget* parent, ThePlayer* player, 
     QSlider* volumeSlider = new QSlider(Qt::Horizontal);
     volumeSlider->setMinimum(0);  // 最小音量
     volumeSlider->setMaximum(100);  // 最大音量
-    volumeSlider->setValue(50);  // 默认音量 50%
+    volumeSlider->setValue(0);  // 默认音量 0
     volumeSlider->setTickPosition(QSlider::TicksBelow);
     volumeSlider->setTickInterval(10);
 
@@ -216,7 +254,7 @@ void setupControls(QVBoxLayout* mainLayout, QWidget* parent, ThePlayer* player, 
     // 快进按钮功能
     QObject::connect(fastForwardButton, &QPushButton::clicked, [&]() {
         int currentPos = player->position();  // 获取当前播放位置
-        int newPos = currentPos + 1000;  // 快进10秒 (单位：毫秒)
+        int newPos = currentPos + 5000;  // 快进5秒 (单位：毫秒)
         if (newPos > player->duration()) {
             newPos = player->duration();  // 如果超过视频时长，设置为最大时长
         }
@@ -226,7 +264,7 @@ void setupControls(QVBoxLayout* mainLayout, QWidget* parent, ThePlayer* player, 
     // 快退按钮功能
     QObject::connect(rewindButton, &QPushButton::clicked, [&]() {
         int currentPos = player->position();  // 获取当前播放位置
-        int newPos = currentPos - 1000;  // 快退10秒 (单位：毫秒)
+        int newPos = currentPos - 5000;  // 快退5秒 (单位：毫秒)
         if (newPos < 0) {
             newPos = 0;  // 如果小于0，设置为0
         }
@@ -241,8 +279,13 @@ void setupControls(QVBoxLayout* mainLayout, QWidget* parent, ThePlayer* player, 
         player->setVolume(value);  // 调整音量
     });
 
+
     // 控制按钮布局
     QHBoxLayout* controlLayout = new QHBoxLayout();
+
+    // 设置按钮和倍速选择器、音量滑块居中
+    controlLayout->setAlignment(Qt::AlignCenter);
+
     controlLayout->addWidget(rewindButton);
     controlLayout->addWidget(prevButton);
     controlLayout->addWidget(pauseButton);
@@ -257,10 +300,8 @@ void setupControls(QVBoxLayout* mainLayout, QWidget* parent, ThePlayer* player, 
 
     // 将音量滑块添加到控制布局
     controlLayout->addWidget(volumeSlider);
-
-    // 设置按钮和倍速选择器、音量滑块居中
-    controlLayout->setAlignment(Qt::AlignCenter);
 }
+
 
 int main(int argc, char *argv[]) {
     QApplication app(argc, argv);
