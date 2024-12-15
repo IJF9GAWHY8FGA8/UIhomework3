@@ -11,10 +11,12 @@
 #include <QIcon>
 #include <QSlider>
 #include <QTimer>
+#include <QComboBox>
+#include <QLabel>
 #include "the_player.h"
 #include "the_button.h"
 #include "the_slider.h"
-#include "customvideowidget.h"
+
 
 // Get video and thumbnail information
 std::vector<TheButtonInfo> getInfoIn(std::string loc) {
@@ -64,64 +66,75 @@ QString getVideoPath() {
 
 // Define setupUI function outside of main()
 void setupUI(QWidget* parent, ThePlayer* player, QVBoxLayout* mainLayout) {
-    // Create and add the custom video widget
-    CustomVideoWidget* videoWidget = new CustomVideoWidget;  // Custom video widget
-    mainLayout->addWidget(videoWidget);
+    // 创建并添加自定义视频控件
+    CustomVideoWidget* videoWidget = new CustomVideoWidget;  // 自定义视频控件
+    videoWidget->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);  // 设置为可扩展，填充父控件
+    mainLayout->addWidget(videoWidget, 4);  // 将视频控件添加到布局中，权重为4
 
-    // Create the video progress slider (replace QSlider)
+    // 创建视频进度条（替换 QSlider）
     VideoSlider* progressSlider = new VideoSlider(parent);
-    progressSlider->setRange(0, 100);  // Set the range of the progress bar to 0-100%
-    progressSlider->setFixedWidth(videoWidget->width());  // Set progress slider width to match video widget
-    mainLayout->addWidget(progressSlider);  // Add progress slider below the video widget
+    progressSlider->setRange(0, 100);  // 设置进度条范围为 0-100%
+    progressSlider->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);  // 宽度可扩展，高度固定
+    mainLayout->addWidget(progressSlider, 1);  // 将进度条添加到布局中，权重为1
 
-    // Connect the progress slider to the player
+    // 将进度条连接到播放器
     player->setProgressSlider(progressSlider);
 
-    // Create a timer to periodically update the progress
+    // 创建一个定时器，每隔100毫秒更新进度
     QTimer* timer = new QTimer(parent);
     QObject::connect(timer, &QTimer::timeout, [=]() {
         if (player->duration() > 0) {
-            int position = (int)((float)player->position() / player->duration() * 100);  // Calculate progress
-            progressSlider->setValue(position);  // Update the progress slider
+            int position = (int)((float)player->position() / player->duration() * 100);  // 计算进度
+            progressSlider->setValue(position);  // 更新进度条的值
         }
     });
-    timer->start(100);  // Update every 100 ms
+    timer->start(100);  // 每100毫秒更新一次
 
-    // Connect the progress slider movement to the video position
+    // 将进度条的移动与视频位置连接
     QObject::connect(progressSlider, &VideoSlider::sliderMoved, [=](int value) {
-        int newPosition = (value / 100.0) * player->duration();  // Convert progress value to video position
-        player->setPosition(newPosition);  // Set the player's position
+        int newPosition = (value / 100.0) * player->duration();  // 将进度条的值转换为视频位置
+        player->setPosition(newPosition);  // 设置播放器的位置
     });
 
-    // Connect the video widget resizing to the progress slider width
+    // 连接视频控件的大小变化与进度条宽度
     QObject::connect(videoWidget, &CustomVideoWidget::resized, [=](int newWidth) {
-        progressSlider->setFixedWidth(newWidth);  // Update the progress slider width
+        progressSlider->setFixedWidth(newWidth);  // 更新进度条的宽度，确保与视频控件一致
     });
+
+    // 设置视频播放器的输出为自定义视频控件
+    player->setVideoOutput(videoWidget);
 }
 
 // Function to setup control buttons: pause, previous, and next
 void setupControls(QVBoxLayout* mainLayout, QWidget* parent, ThePlayer* player, std::vector<TheButtonInfo>& videos, int& currentIndex) {
-    // Create the pause button
+
+    // 创建暂停按钮
     QPushButton* pauseButton = new QPushButton("||");
 
-    // Create the previous button (double triangle)
-    QPushButton *prevButton = new QPushButton();
-    prevButton->setText("◁◁");  // Double triangle represents "Previous"
+    // 创建上一个视频按钮
+    QPushButton* prevButton = new QPushButton();
+    prevButton->setText("◁◁");
 
-    // Create the next button (double triangle)
-    QPushButton *nextButton = new QPushButton();
-    nextButton->setText("▷▷");  // Double triangle represents "Next"
+    // 创建下一个视频按钮
+    QPushButton* nextButton = new QPushButton();
+    nextButton->setText("▷▷");
 
-    // Ensure videos list is not empty
+    // 创建快进按钮
+    QPushButton* fastForwardButton = new QPushButton("⏩");  // 使用 ⏩ 表示快进
+
+    // 创建快退按钮
+    QPushButton* rewindButton = new QPushButton("⏪");  // 使用 ⏪ 表示快退
+
+    // 如果视频列表为空，则返回
     if (videos.empty()) {
         qDebug() << "No videos found!";
-        return;  // If no videos, do nothing
+        return;
     }
 
-    // Debugging: Check the size of the video list
+    // 调试：输出视频列表数量
     qDebug() << "Number of videos: " << videos.size();
 
-    // Pause button functionality
+    // 暂停按钮功能
     QObject::connect(pauseButton, &QPushButton::clicked, [=]() {
         if (pauseButton->text() == "||") {
             pauseButton->setText("▶");
@@ -132,51 +145,67 @@ void setupControls(QVBoxLayout* mainLayout, QWidget* parent, ThePlayer* player, 
         }
     });
 
-    // Previous button functionality
+    // 上一个视频按钮功能
     QObject::connect(prevButton, &QPushButton::clicked, [&]() {
         qDebug() << "Prev button clicked! Current index: " << currentIndex;
-
-        // Ensure currentIndex is within valid range
         if (currentIndex > 0) {
-            currentIndex--;  // Move to the previous video
+            currentIndex--;
         } else {
-            currentIndex = videos.size() - 1;  // If at the first video, go to the last one
+            currentIndex = videos.size() - 1;
         }
-
-        // Debug output
         qDebug() << "New index after prev: " << currentIndex;
-
-        // Call setVideoByIndex with the updated currentIndex
-        player->setVideoByIndex(currentIndex, &videos);  // Play the video at the new index
+        player->setVideoByIndex(currentIndex, &videos);
     });
 
-    // Next button functionality
+    // 下一个视频按钮功能
     QObject::connect(nextButton, &QPushButton::clicked, [&]() {
         qDebug() << "Next button clicked! Current index: " << currentIndex;
-
-        // Ensure currentIndex is within valid range
         if (currentIndex < videos.size() - 1) {
-            currentIndex++;  // Move to the next video
+            currentIndex++;
         } else {
-            currentIndex = 0;  // If at the last video, go to the first one
+            currentIndex = 0;
         }
-
-        // Debug output
         qDebug() << "New index after next: " << currentIndex;
-
-        // Call setVideoByIndex with the updated currentIndex
-        player->setVideoByIndex(currentIndex, &videos);  // Play the video at the new index
+        player->setVideoByIndex(currentIndex, &videos);
     });
 
-    // Layout for controls
-    QHBoxLayout *controlLayout = new QHBoxLayout();
-    controlLayout->addWidget(pauseButton);
+    // 快进按钮功能
+    QObject::connect(fastForwardButton, &QPushButton::clicked, [&]() {
+        int currentPos = player->position();  // 获取当前播放位置
+        int newPos = currentPos + 1000;  // 快进10秒 (单位：毫秒)
+        if (newPos > player->duration()) {
+            newPos = player->duration();  // 如果超过视频时长，设置为最大时长
+        }
+        player->setPosition(newPos);  // 设置新的播放位置
+    });
+
+    // 快退按钮功能
+    QObject::connect(rewindButton, &QPushButton::clicked, [&]() {
+        int currentPos = player->position();  // 获取当前播放位置
+        int newPos = currentPos - 1000;  // 快退10秒 (单位：毫秒)
+        if (newPos < 0) {
+            newPos = 0;  // 如果小于0，设置为0
+        }
+        player->setPosition(newPos);  // 设置新的播放位置
+    });
+
+    // 控制按钮布局
+    QHBoxLayout* controlLayout = new QHBoxLayout();
+
+    controlLayout->addWidget(rewindButton);
+
     controlLayout->addWidget(prevButton);
+
+    controlLayout->addWidget(pauseButton);
+
     controlLayout->addWidget(nextButton);
 
-    // Add control layout to the main layout
+    controlLayout->addWidget(fastForwardButton);
+
+    // 将控制按钮布局添加到主布局
     mainLayout->addLayout(controlLayout);
 }
+
 
 int main(int argc, char *argv[]) {
     QApplication app(argc, argv);

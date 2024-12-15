@@ -11,14 +11,12 @@ SOURCES += \
         the_button.cpp \
         the_player.cpp \
         tomeo.cpp \
-        the_slider.cpp \
-        customvideowidget.cpp
+        the_slider.cpp
 
 HEADERS += \
     the_button.h \
     the_player.h \
-    the_slider.h \
-    customvideowidget.h
+    the_slider.h
 
 
 # Default rules for deployment.
