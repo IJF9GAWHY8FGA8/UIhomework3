@@ -125,6 +125,50 @@ void setupControls(QVBoxLayout* mainLayout, QWidget* parent, ThePlayer* player, 
     // 创建快退按钮
     QPushButton* rewindButton = new QPushButton("⏪");  // 使用 ⏪ 表示快退
 
+    // 设置按钮最小和最大尺寸
+    QSize minSize(50, 50);  // 设置按钮最小尺寸为 50x50
+    QSize maxSize(150, 50); // 设置按钮最大尺寸为 150x50
+
+    // 设置按钮尺寸
+    pauseButton->setMinimumSize(minSize);
+    pauseButton->setMaximumSize(maxSize);
+
+    prevButton->setMinimumSize(minSize);
+    prevButton->setMaximumSize(maxSize);
+
+    nextButton->setMinimumSize(minSize);
+    nextButton->setMaximumSize(maxSize);
+
+    fastForwardButton->setMinimumSize(minSize);
+    fastForwardButton->setMaximumSize(maxSize);
+
+    rewindButton->setMinimumSize(minSize);
+    rewindButton->setMaximumSize(maxSize);
+
+    // 创建倍速选择器
+    QComboBox* speedComboBox = new QComboBox();
+    speedComboBox->addItem("1x");
+    speedComboBox->addItem("1.25x");
+    speedComboBox->addItem("1.5x");
+    speedComboBox->addItem("2x");
+    speedComboBox->setCurrentIndex(0);  // 默认选择 1x
+
+    // 设置倍速选择器的最大尺寸
+    speedComboBox->setMinimumSize(minSize);
+    speedComboBox->setMaximumSize(maxSize);
+
+    // 创建音量滑块
+    QSlider* volumeSlider = new QSlider(Qt::Horizontal);
+    volumeSlider->setMinimum(0);  // 最小音量
+    volumeSlider->setMaximum(100);  // 最大音量
+    volumeSlider->setValue(50);  // 默认音量 50%
+    volumeSlider->setTickPosition(QSlider::TicksBelow);
+    volumeSlider->setTickInterval(10);
+
+    // 设置音量滑块的最大尺寸
+    volumeSlider->setMinimumSize(minSize);
+    volumeSlider->setMaximumSize(maxSize);
+
     // 如果视频列表为空，则返回
     if (videos.empty()) {
         qDebug() << "No videos found!";
@@ -189,23 +233,34 @@ void setupControls(QVBoxLayout* mainLayout, QWidget* parent, ThePlayer* player, 
         player->setPosition(newPos);  // 设置新的播放位置
     });
 
+    // 连接倍速选择器
+    QObject::connect(speedComboBox, SIGNAL(currentIndexChanged(int)), player, SLOT(updatePlaybackSpeed(int)));
+
+    // 连接音量滑块
+    QObject::connect(volumeSlider, &QSlider::valueChanged, [=](int value) {
+        player->setVolume(value);  // 调整音量
+    });
+
     // 控制按钮布局
     QHBoxLayout* controlLayout = new QHBoxLayout();
-
     controlLayout->addWidget(rewindButton);
-
     controlLayout->addWidget(prevButton);
-
     controlLayout->addWidget(pauseButton);
-
     controlLayout->addWidget(nextButton);
-
     controlLayout->addWidget(fastForwardButton);
 
     // 将控制按钮布局添加到主布局
     mainLayout->addLayout(controlLayout);
-}
 
+    // 将倍速选择器添加到控制布局
+    controlLayout->addWidget(speedComboBox);
+
+    // 将音量滑块添加到控制布局
+    controlLayout->addWidget(volumeSlider);
+
+    // 设置按钮和倍速选择器、音量滑块居中
+    controlLayout->setAlignment(Qt::AlignCenter);
+}
 
 int main(int argc, char *argv[]) {
     QApplication app(argc, argv);

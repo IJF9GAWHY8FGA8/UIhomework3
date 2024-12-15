@@ -8,12 +8,14 @@ CONFIG += c++11
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
+        selection_page.cpp \
         the_button.cpp \
         the_player.cpp \
         tomeo.cpp \
         the_slider.cpp
 
 HEADERS += \
+    selection_page.h \
     the_button.h \
     the_player.h \
     the_slider.h
