@@ -1,3 +1,14 @@
+/*
+ *
+ *    ______
+ *   /_  __/___  ____ ___  ___  ____
+ *    / / / __ \/ __ `__ \/ _ \/ __ \
+ *   / / / /_/ / / / / / /  __/ /_/ /
+ *  /_/  \____/_/ /_/ /_/\___/\____/
+ *              video for sports enthusiasts...
+ *
+ *  2811 cw3 : twak
+ */
 #include <QApplication>
 #include <QtMultimediaWidgets/QVideoWidget>
 #include <QMediaPlaylist>
@@ -20,6 +31,10 @@
 #include <QScrollBar>
 #include <QSplitter>
 #include <QSlider>
+#include <QFileDialog>
+#include <QMessageBox>
+#include <QDebug>
+#include <QDir>
 #include "the_player.h"
 #include "the_button.h"
 #include "the_slider.h"
@@ -64,12 +79,41 @@ std::vector<TheButtonInfo> getInfoIn(std::string loc) {
 
 // Get the video directory path
 QString getVideoPath() {
-    QString currentDir = QDir::currentPath();
-    qDebug() << "Current working directory: " << currentDir;
-    QDir dir(currentDir);
-    dir.cdUp();
-    dir.cd("2811_cw3-master-release-lowres/videos");  // Video storage directory
-    return dir.absolutePath();
+    // 显示一个消息框，询问用户是否选择固定路径
+    QMessageBox::StandardButton reply;
+    reply = QMessageBox::question(nullptr, "Choose Path", "Do you want to use a fixed path?",
+                                  QMessageBox::Yes | QMessageBox::No);
+
+    // 如果用户选择了固定路径
+    if (reply == QMessageBox::Yes) {
+        QString currentDir = QDir::currentPath();
+        qDebug() << "Current working directory: " << currentDir;
+
+        QDir dir(currentDir);
+        if (!dir.cdUp()) {
+            qWarning() << "Failed to move up one level in directory. Current directory: " << currentDir;
+            return "";  // 如果无法向上移动目录，返回空字符串
+        }
+
+        // 切换到视频存储目录
+        if (!dir.cd("2811_cw3-master-release-lowres/videos")) {
+            qWarning() << "Failed to change directory to 'videos' in: " << dir.absolutePath();
+            return "";  // 如果找不到该目录，返回空字符串
+        }
+
+        return dir.absolutePath();  // 返回绝对路径
+    }
+    // 如果用户选择了自定义路径
+    else {
+        QString dirPath = QFileDialog::getExistingDirectory(nullptr, "Select Video Folder", QDir::currentPath());
+        if (!dirPath.isEmpty()) {
+            qDebug() << "User selected directory: " << dirPath;
+            return dirPath;  // 返回用户选择的路径
+        } else {
+            qWarning() << "No folder selected.";
+            return "";  // 用户没有选择任何文件夹
+        }
+    }
 }
 
 // Define setupUI function outside of main()
