@@ -11,6 +11,7 @@
 #include <QVideoWidget>
 #include <QResizeEvent>
 
+
 class ThePlayer : public QMediaPlayer {
     Q_OBJECT
 
@@ -42,9 +43,7 @@ public:
         progressSlider = slider;
     }
 
-    // Method to set the playback speed
     void setPlaybackSpeed(qreal speed) {
-        // Set the playback rate for the media player
         setPlaybackRate(speed);
     }
 
@@ -64,7 +63,7 @@ public slots:
 
     // Set the video content and switch based on the index
     void setVideoByIndex(int index, const std::vector<TheButtonInfo>* videos) {
-        if (index >= 0 && index < videos->size()) {
+        if (index >= 0 && index < static_cast<int>(videos->size())) {
             // Use const TheButtonInfo* to match the constant reference returned
             const TheButtonInfo* buttonInfo = &videos->at(index);
             setMedia(*buttonInfo->url);  // Set the video file
@@ -101,4 +100,9 @@ signals:
     void resized(int newWidth);  // 自定义信号，传递新宽度
 };
 
+class Player {
+public:
+    Player();
+    ~Player();
+};
 #endif // CW2_THE_PLAYER_H
